@@ -2,13 +2,7 @@ import nltk
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
-import pyterrier as pt
-import requests
-import json
-
-if not pt.started():
-    pt.init()
-
+import re
 nltk.download("punkt")
 nltk.download("punkt_tab")
 nltk.download("stopwords")
