@@ -1,13 +1,8 @@
 import pandas as pd
 import re 
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.stem import PorterStemmer
-from nltk.corpus import stopwords
 import requests
 
-from Preprocessing.Preprocessing_EN import Preprocessing_EN
-from Preprocessing.Preprocessing_AR import Preprocessing_AR
+from Preprocessing.Preprocessing import Preprocessing_AR,Preprocessing_EN
 
 
 # get lawyers from database
@@ -45,7 +40,7 @@ rates['rating_rate'] = rates['rating_rate'].apply(lambda x :f"{x}star")
 # rates.head()
 
 agencies_response = agencie_response.json()
-agencies = pd.DataFrame(agencies_response["agencies"]).rename(columns={
+agencies = pd.DataFrame(agencies_response["data"]["agencies"]).rename(columns={
     "id":"agency_id"
 })
 agencies = agencies[["agency_id","lawyer_id"]]
