@@ -89,8 +89,6 @@ print("Index created with reference:", index_ref)
 
 
 
-
-
 def Vectorize_cosine_similarity(user_input,document=documents):
     all_descriptions = [user_input]+ documents["text"].tolist()
     vectorizer = TfidfVectorizer()
