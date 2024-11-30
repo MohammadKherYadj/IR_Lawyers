@@ -1,1 +1,4 @@
 venv/
+lawyer_index/
+_pycache_/
+Preprocessing/_pycache_/

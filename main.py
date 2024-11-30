@@ -1,10 +1,13 @@
 import pandas as pd
 import numpy as np
-import re 
+import pyterrier as pt
 import requests,json
 from Preprocessing.Preprocessing import split_by_language
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+if not pt.started():
+    pt.init()
 
 
 # get lawyers from database
@@ -43,7 +46,7 @@ rates['rating_rate'] = rates['rating_rate'].apply(lambda x :f"{x}star")
 # rates.head()
 
 agencies_response = agencie_response.json()
-agencies = pd.DataFrame(agencies_response["data"]["agencies"]).rename(columns={
+agencies = pd.DataFrame(agencies_response["agencies"]).rename(columns={
     "id":"agency_id"
 })
 agencies = agencies[["agency_id","lawyer_id"]]
@@ -77,7 +80,7 @@ documents.rename(columns={
 # documents.head()
 
 
-index_path = r'C:\Users\Mohammad Kher\Desktop\Projects\IR\lawyer_index'
+index_path = r'C:\Users\Mohammad Kher\Desktop\IR\lawyer_index'
 indexer = pt.DFIndexer(index_path,overwrite=True)
 
 index_ref = indexer.index(documents['text'],documents['docno'].astype(str))
@@ -88,7 +91,7 @@ print("Index created with reference:", index_ref)
 
 
 
-def Vectorize_cosine_similarity(user_input,document):
+def Vectorize_cosine_similarity(user_input,document=documents):
     all_descriptions = [user_input]+ documents["text"].tolist()
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform(all_descriptions)
@@ -97,57 +100,54 @@ def Vectorize_cosine_similarity(user_input,document):
 
     similarities = cosine_similarity(user_vectors, lawyer_vectors).flatten()
     ranked_lawyers = np.argsort(similarities)[::-1]
-    return ranked_lawyers
+    return get_recommendation(ranked_lawyers)
 
 def get_recommendation(ranked_lawyers):
-    # Initialize an empty DataFrame to store results
-    result = pd.DataFrame()
-
-    # Set to keep track of processed lawyer_ids
+    result = []
     processed_lawyer_ids = set()
 
-    # Iterate through ranked_lawyers
     for idx in ranked_lawyers:
         lawyer_id = documents.iloc[idx]["docno"]
         
-        # Check if the lawyer_id has already been processed
+        # Ensure unique recommendations
         if lawyer_id not in processed_lawyer_ids:
-            # Filter the lawyers DataFrame for the current lawyer_id
-            matched_lawyer = lawyers_pere[lawyers_pere['id'] == lawyer_id]
+            matched_lawyer = lawyers_pere[lawyers_pere['id'] == int(lawyer_id)]
             
-            # Append the matching row to the result DataFrame
-            result = pd.concat([result, matched_lawyer], ignore_index=True)
-            
-            # Mark the lawyer_id as processed
-            processed_lawyer_ids.add(lawyer_id)
+            # Append matched lawyer data
+            if not matched_lawyer.empty:
+                result.append(matched_lawyer.iloc[0].to_dict())
+                processed_lawyer_ids.add(lawyer_id)
 
-    # return the resulting DataFrame
     return convert2json(result)
 
-def convert2json(DataFrame):
-    lawyers_data=[]
-    final_rate = pd.DataFrame(DataFrame)
-    for idx, row in DataFrame.iterrows():
+
+def convert2json(lawyers_list):
+    lawyers_data = []
+    for row in lawyers_list:
         lawyer = {
             'id': row['id'],
             'name': row['name'],
-            'email': row['email'],
-            'address': row['address'],
-            'union_branch': row['union_branch'],
-            'union_number': row['union_number'],
-            'affiliation_date': row['affiliation_date'],
-            'specializations': row['specializations'],  # Assuming specialization is a single string in this example
-            'years_of_experience': row['years_of_experience'],
-            'description': row['description'],
-            'phone': row['phone'],
-            'avatar': row['avatar']
+            'email': row.get('email', None),
+            'address': row.get('address', None),
+            'union_branch': row.get('union_branch', None),
+            'union_number': row.get('union_number', None),
+            'affiliation_date': row.get('affiliation_date', None),
+            'specializations': row.get('specializations', None),
+            'years_of_experience': row.get('years_of_experience', None),
+            'description': row.get('description', None),
+            'phone': row.get('phone', None),
+            'avatar': row.get('avatar', None),
         }
-    lawyers_data.append(lawyer)
+        lawyers_data.append(lawyer)
+
     output_json = {
-    'isSuccess': True,
-    'lawyers': lawyers_data
+        'isSuccess': True,
+        'lawyers': lawyers_data
     }
-    json_output = json.dumps(output_json, indent=2, ensure_ascii=False)
-    return json_output
+    return output_json
 
 
+
+
+if __name__ == "__main__":
+    print(Vectorize_cosine_similarity("شرعية عائلية"))
